@@ -1,0 +1,32 @@
+.list-content-wrapper {
+	padding-left:10px;
+	padding-right:40px;
+}
+
+.list-content-wrapper .list-action {
+	float:right;
+	width:40px;
+	margin-right:-40px;
+}
+
+.list-content-wrapper .list-content {
+	float:left;
+}
+
+.list-content-wrapper .list-description {
+	font-size:smaller;
+	white-space:nowrap;
+	text-overflow:ellipsis;
+}
+
+.list-content-wrapper .list-action {
+	line-height:50px;
+}
+
+.item-scene .field-label {
+	line-height:50px;
+	min-width:100px;
+	width:auto;
+	float:left;
+	padding-left:10px;
+}

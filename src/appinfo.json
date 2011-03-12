@@ -1,0 +1,10 @@
+{
+	"id": "com.tiqtech.simplydone",
+	"version": "0.1.0",
+	"vendor": "tiqtech.com",
+	"type": "web",
+	"noWindow":"true",
+	"main": "index.html",
+	"title": "Simply Done!",
+	"icon": "icon.png"
+}
