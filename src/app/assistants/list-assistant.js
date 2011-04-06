@@ -1,101 +1,246 @@
 var _ListAssistant = {
-	initialize:function(a) {
-		Mojo.Log.info("a=")
+	initialize:function(list) {
+		this.list = list;
+		this.handlers = new HandlerManager(this);
+		this.doTodayList = null;
+		this.doLaterList = null;
 		
-		this.list = {
-			items: [{
-				"title": "Start the UI",
-				"doToday": true,
-				"created": "02282011",
-				"updated": "02282011",
-				"complete": false,
-				"list": "b06fc8bfe012f85dfc56231c25d2b558",
-				"order": 1,
-				"id": "5a2146cdc56a0d69e3dbcd255803a68c",
-				"links": {
-					"self": "/users/ryan/lists/b06fc8bfe012f85dfc56231c25d2b558/items/5a2146cdc56a0d69e3dbcd255803a68c"
-				}
-			}, {
-				"title": "Finish this app",
-				"doToday": true,
-				"created": "02282011",
-				"updated": "02282011",
-				"complete": false,
-				"list": "b06fc8bfe012f85dfc56231c25d2b558",
-				"order": 2,
-				"id": "17b376719e757c7b6320b31a379fec12",
-				"links": {
-					"self": "/users/ryan/lists/b06fc8bfe012f85dfc56231c25d2b558/items/17b376719e757c7b6320b31a379fec12"
-				}
-			}, {
-				"title": "Do some testing",
-				"doToday": false,
-				"created": "02282011",
-				"updated": "02282011",
-				"complete": false,
-				"list": "b06fc8bfe012f85dfc56231c25d2b558",
-				"order": 3,
-				"id": "17b376719e757c7b6320b31a379fec12",
-				"links": {
-					"self": "/users/ryan/lists/b06fc8bfe012f85dfc56231c25d2b558/items/17b376719e757c7b6320b31a379fec12"
-				}
-			}]
+		this.doTodayModel = {
+			title:"doToday",
+			items: null
 		};
 		
-		this.handlers = new HandlerManager(this);
-		this.handlers.bind("doTodayDivider");
+		this.doLaterModel = {
+			title:"doLater",
+			items: null
+		};
+		
+		this.commandMenuModel = {
+			visible:true,
+			items:[
+				{label:"Add",command:"add-item"}
+			]
+		}
+		
+		this.disableUpdate = false;
+		
+		this.deletedItems = {};
 	},
-	setup:function(a) {
-		Mojo.Log.info("a");
-		this.controller.setupWidget("list-widget", {
+	setup:function() {
+		var listAttributes = {
 			itemTemplate: 'list/item-template',
 			reorderable:true,
-			addItemLabel: $L('Add ...'),
 			swipeToDelete: true,
-			dividerFunction:this.handlers.doTodayDivider,
-			dividerTemplate:"list/divider"
-		}, this.list);
+			emptyTemplate:"list/empty",
+			dragDatatype:"simply-done-item",
+			uniquenessProperty:"id",
+			itemsCallback:this.handlers.onLoadItems
+		};
 		
-		this.controller.setupWidget("item-complete", {modelProperty:"complete"})
+		this.controller.setupWidget("list-title", {modelProperty: "name"}, this.list);
+		this.controller.setupWidget("list-description", {modelProperty: "description"}, this.list);
+		this.controller.setupWidget("doToday-list", listAttributes);
+		this.controller.setupWidget("doLater-list", listAttributes);
+		this.controller.setupWidget("item-complete", {modelProperty:"complete"});
+		this.controller.setupWidget(Mojo.Menu.commandMenu, {}, this.commandMenuModel)
+		
+		this.doTodayList = this.controller.get("doToday-list");
+		this.doLaterList = this.controller.get("doLater-list");
+		this.titleBar = this.controller.select("DIV.list-title")
+		
+		beListful.get(this.list.links.items, this.handlers.onGetItems);
 	},
 	activate:function() {
-		this.controller.listen(this.controller.get("list-widget"), Mojo.Event.listTap, this.handlers.onItemTap);
-		this.controller.listen(this.controller.get("list-widget"), Mojo.Event.listReorder, this.handlers.onReorder);
+		// clear disableUpdate flag
+		this.disableUpdate = false;
+		
+		if (!this.titleFieldInput) {
+			this.titleFieldInput = this.controller.select("DIV#list-title INPUT");
+		}
+		
+		if (!this.descriptionFieldInput) {
+			this.descriptionFieldInput = this.controller.select("DIV#list-description INPUT");
+		}
+		
+		this.titleFieldInput.onfocus = this.handlers.onFocusTitleField;
+		//this.controller.listen(this.descriptionFieldInput, "onfocus", this.handlers.onFocusTitleField)
+		
+		this.controller.listen(this.doTodayList, Mojo.Event.listAdd, this.handlers.onAddItem);
+		this.controller.listen(this.doTodayList, Mojo.Event.listDelete, this.handlers.onDeleteItem);
+		this.controller.listen(this.doTodayList, Mojo.Event.listTap, this.handlers.onItemTap);
+		this.controller.listen(this.doTodayList, Mojo.Event.listReorder, this.handlers.onReorder);
+		
+		this.controller.listen(this.doLaterList, Mojo.Event.listAdd, this.handlers.onAddItem);
+		this.controller.listen(this.doLaterList, Mojo.Event.listDelete, this.handlers.onDeleteItem);
+		this.controller.listen(this.doLaterList, Mojo.Event.listTap, this.handlers.onItemTap);
+		this.controller.listen(this.doLaterList, Mojo.Event.listReorder, this.handlers.onReorder);
 	},
 	deactivate:function() {
-		this.controller.stopListening(this.controller.get("list-widget"), Mojo.Event.listTap, this.handlers.onItemTap)
-		this.controller.stopListening(this.controller.get("list-widget"), Mojo.Event.listReorder, this.handlers.onReorder);
+		
+		for(var k in this.deletedItems) {
+			beListful.del(this.deletedItems[k].links.self, function() {});
+		}
+		
+		if (!this.disableUpdate) {
+			beListful.put(this.list.links.items, this.combineItems(), function(){});
+		}
+		
+		this.controller.stopListening(this.doTodayList, Mojo.Event.listAdd, this.handlers.onAddItem);
+		this.controller.stopListening(this.doTodayList, Mojo.Event.listDelete, this.handlers.onDeleteItem);
+		this.controller.stopListening(this.doTodayList, Mojo.Event.listTap, this.handlers.onItemTap)
+		this.controller.stopListening(this.doTodayList, Mojo.Event.listReorder, this.handlers.onReorder);
+	
+		this.controller.stopListening(this.doLaterList, Mojo.Event.listAdd, this.handlers.onAddItem);
+		this.controller.stopListening(this.doLaterList, Mojo.Event.listDelete, this.handlers.onDeleteItem);
+		this.controller.stopListening(this.doLaterList, Mojo.Event.listTap, this.handlers.onItemTap);
+		this.controller.stopListening(this.doLaterList, Mojo.Event.listReorder, this.handlers.onReorder);
 	},
-	doTodayDivider:function(itemModel) {
-		return (itemModel.doToday) ? $L("Today") : $L("Later");
+	handleCommand:function(event) {
+		if(event.type == Mojo.Event.command) {
+			switch(event.command) {
+				case "add-item":
+					this.onAddNewItem();
+					break;
+			}
+		}
+	},
+	onGetItems:function(items) {
+		this.doTodayModel.items = [];
+		this.doLaterModel.items = [];
+		
+		for(var i=0;i<items.length;i++) {
+			this[(items[i].doToday) ? "doTodayModel" : "doLaterModel"].items.push(items[i]);
+		}
+		
+		if(this.doTodayModel.items.length == 0) {
+			this.doTodayModel.items.push(this.getEmptyListItem(true));
+		}
+		
+		if(this.doLaterModel.items.length == 0) {
+			this.doLaterModel.items.push(this.getEmptyListItem(false));
+		}
+		
+		this.doTodayList.mojo.noticeAddedItems(0, this.doTodayModel.items);
+		this.doLaterList.mojo.noticeAddedItems(0, this.doLaterModel.items);				
+	},
+	onLoadItems:function(widget, offset, count) {
+		var model = (widget == this.doTodayList) ? this.doTodayModel : this.doLaterModel;
+		
+		if(model.items) {
+			widget.mojo.noticeAddedItems(offset, model.items.slice(offset, count));
+		}
+	},
+	onDeleteItem:function(event) {
+		var m = this.getListModel(event);		
+		m.items.splice(event.index, 1);
+		
+		this.deletedItems[event.item.id] = event.item;
+		
+		// add "no-items" item if the last real item is removed
+		if(m.items.length === 0 ) {
+			m.items.push(this.getEmptyListItem(m===this.doTodayModel));
+			var widget = event.currentTarget;
+			(function(){
+				widget.mojo.noticeAddedItems(0, m.items);
+			}).defer(0);
+		}
+	},
+	/** Add item due to drag and drop **/
+	onAddItem:function(event) {
+		var doToday = (event.currentTarget === this.doTodayList);
+		var m = this.getListModel(event);
+
+		// remove item from delete queue if adding to another list
+		if(this.deletedItems[event.item.id]) {
+			delete this.deletedItems[event.item.id];
+		}
+		
+		event.item.doToday = doToday;
+		this.addListItem(event.currentTarget, m, event.item, event.index);
+	},
+	/** Show add new item scene on command menu button click **/
+	onAddNewItem:function() {
+		// prevent beListful update when pushing item scene
+		this.disableUpdate = true; 
+		this.controller.stageController.pushScene("item", SimplyDone.getItemTemplate(), this.handlers.onNewItem);
+	},
+	/** callback from onAddNewItem **/
+	onNewItem:function(item) {
+		if(!item) return;
+		
+		if(item.doToday) {
+			this.addListItem(this.doTodayList, this.doTodayModel, item, this.doTodayModel.items.length, true);
+		} else {
+			this.addListItem(this.doLaterList, this.doLaterModel, item, this.doLaterModel.items.length, true)
+		}
+				
+		// send to server and report any errors that occur
+		beListful.post(this.list.links.items, item, function(response) {
+			item.id = response.id;
+		}.bind(this));
 	},
 	onItemTap:function(event) {
+		// prevent beListful update when pushing item scene
+		this.disableUpdate = true;
 		this.controller.stageController.pushScene("item", event.item)
 	},
 	onReorder:function(event) {
-		try {
-			Mojo.Log.error("before %j", this.list)
+		var m = this.getListModel(event);
+		
+		m.items.splice(event.fromIndex, 1);
+		m.items.splice(event.toIndex, 0, event.item);
+	},
+	onFocusTitleField:function(event) {
+		this.titleBar.addClassName("focused");
+	},
+	getListModel:function(event) {
+		return (event.currentTarget === this.doTodayList) ? this.doTodayModel : this.doLaterModel;
+	},
+	getEmptyListItem:function(doToday) {
+		return {
+			noItemsMessage: (doToday) ? $L("No tasks for today") : $L("No tasks for later"),
+			noItemsClass:"no-items"
+		}
+	},
+	addListItem:function(widget, model, newItem, newIndex, notice) {
+		Mojo.Log.error("addListItem",widget==this.doTodayList,model==this.doTodayModel,newItem,newIndex,notice);
+		if(model.items.length === 1 && model.items[0].noItemsClass) {
+			model.items[0] = newItem;
+			widget.mojo.noticeRemovedItems(0, 1);
+		} else {
+			model.items.splice(newIndex, 0, newItem);
 			
-			this.list.items.splice(event.fromIndex, 1);
-			this.list.items.splice(event.toIndex, 0, event.item);
-			
-			var nextItem = this.list.items[event.toIndex + 1];
-			var prevItem = this.list.items[event.toIndex - 1];
-			
-			if (!nextItem && prevItem) {
-				Mojo.Log.error("inheriting previous item doToday", prevItem.doToday)
-				event.item.doToday = prevItem.doToday;
-			} else if (nextItem) {
-				Mojo.Log.error("inheriting next item doToday", nextItem.doToday)
-				event.item.doToday = nextItem.doToday;
+			if(notice) {
+				widget.mojo.noticeAddedItems(newIndex, [newItem]);
 			}
-			
-			Mojo.Log.error("after %j", this.list);
-			
-			this.controller.modelChanged(this.list, this);
-			
-		} catch (e) {
-			Mojo.Log.error(e);
+		}
+	},
+	combineItems:function() {
+		var items = [];
+		
+		// strip "no item" items from each model
+		for(var i=0;i<this.doTodayModel.items.length;i++) {
+			if(!this.doTodayModel.items[i].noItemsClass) {
+				items.push(this.doTodayModel.items[i]);
+			}
+		}
+		
+		for(var i=0;i<this.doLaterModel.items.length;i++) {
+			if(!this.doLaterModel.items[i].noItemsClass) {
+				items.push(this.doLaterModel.items[i]);
+			}
+		}
+		
+		for(var i=0;i<items.length;i++) {
+			items[i].order = i+1;
+		}
+		
+		return items;
+	},
+	dumpModel:function(label, m) {
+		Mojo.Log.error(label,"-",m.title);
+		for(var i=0;i<m.items.length;i++) {
+			Mojo.Log.error(m.items[i].order + ": " + m.items[i].title);
 		}
 	}
 };

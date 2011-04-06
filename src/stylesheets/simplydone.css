@@ -1,27 +1,44 @@
-.list-content-wrapper {
-	padding-left:10px;
-	padding-right:40px;
+/** General **/
+
+.item-content-wrapper {
+	display: -webkit-box;
+	-webkit-box-orient:horizontal;
 }
 
-.list-content-wrapper .list-action {
-	float:right;
-	width:40px;
-	margin-right:-40px;
+.item-content-wrapper .item-action {
+	line-height:3em;
+	width:2em;
+	height:100%;
+	padding-left:0.5em;
+	padding-right:0.5em;
+	text-align:right;
 }
 
-.list-content-wrapper .list-content {
-	float:left;
+.item-content-wrapper .item-content {
+	-webkit-box-flex:1;
+	width:auto;
+	padding:0.25em;
+	text-align:left;
 }
 
-.list-content-wrapper .list-description {
+.item-content-wrapper .item-description {
 	font-size:smaller;
 	white-space:nowrap;
 	text-overflow:ellipsis;
+	overflow:hidden;
 }
 
-.list-content-wrapper .list-action {
-	line-height:50px;
+.no-items .item-content-wrapper {
+	display:none;
 }
+
+.no-items .no-items-message {
+	font-style:italic;
+	text-align:center;
+	color:#444444;
+}
+
+/** Item Scene **/
 
 .item-scene .field-label {
 	line-height:50px;
@@ -29,4 +46,25 @@
 	width:auto;
 	float:left;
 	padding-left:10px;
+}
+
+/** List Scene **/
+
+.list-scene .list-title.focused {
+	background-color:#ffffff;
+}
+
+.list-scene .subtitle {
+	margin-left:-20px;
+	margin-bottom:-30px
+}
+
+.list-scene .subtitle INPUT {
+	margin-top:-12pt;
+	font-size:12pt;
+	margin-bottom:11pt;
+}
+
+.list-scene .palm-group.unlabeled {
+	border-width:0px;
 }

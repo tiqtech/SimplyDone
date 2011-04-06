@@ -17,13 +17,14 @@ var _AppAssistant = {
 	onCreateStage:function(stageController) {
 		Mojo.Log.info("> onCreateStage");
 		
-		var firstTime = true;
+		var firstTime = false;
 		var sceneName = (firstTime) ? "first-time" : "main";
 		
-		stageController.pushScene({
-			name:sceneName,
-			transition:Mojo.Transition.crossFade,
-			disableSceneScroller:true
+		beListful.get("/users/ryan", function(user) {
+			stageController.pushScene({
+				name:sceneName,
+				transition:Mojo.Transition.crossFade
+			}, user);	
 		});
 	}
 }

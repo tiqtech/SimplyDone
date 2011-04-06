@@ -5,6 +5,6 @@
 	"type": "web",
 	"noWindow":"true",
 	"main": "index.html",
-	"title": "Simply Done!",
+	"title": "simplyDone",
 	"icon": "icon.png"
 }

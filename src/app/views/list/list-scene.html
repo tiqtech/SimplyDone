@@ -1,4 +1,29 @@
-<div class="palm-group">
-	<div class="palm-group-title" id="list-title"></div>
-	<div x-mojo-element="List" id="list-widget" class="palm-list"></div>
+<div class="palm-row list-title" x-mojo-focus-highlight="true">
+    <div class="palm-row-wrapper textfield-group">
+        <div class="title">
+        	<div class="label right">Name</div>
+            <div id="list-title" x-mojo-element="TextField"></div>
+        </div>
+		<div class="subtitle">
+            <div id="list-description" x-mojo-element="TextField"></div>
+        </div>
+    </div>
 </div>
+
+<table class="palm-list-section-label">
+    <tr>
+    	<td class="left"></td>
+        <td class="label">Today</td>
+        <td class="right"></td>
+    </tr>
+</table>
+<div x-mojo-element="List" id="doToday-list" class="palm-list"></div>
+
+<table class="palm-list-section-label">
+    <tr>
+    	<td class="left"></td>
+        <td class="label">Later</td>
+        <td class="right"></td>
+    </tr>
+</table>
+<div x-mojo-element="List" id="doLater-list" class="palm-list"></div>

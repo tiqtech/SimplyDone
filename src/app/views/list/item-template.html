@@ -1,12 +1,16 @@
 <div class="palm-row" x-mojo-highlight="momentary">
-	<div class="palm-row-wrapper">
-		<div class="list-content-wrapper">
-			<div class="list-content">
-				<div class="list-title">#{title}</div>
+	<div class="palm-row-wrapper #{noItemsClass}">
+		<div class="item-content-wrapper">
+			<div class="item-content">
+				<div class="item-title">#{title}</div>
+				<div class="item-description">#{description}</div>
 			</div>
-			<div class="list-action">
+			<div class="item-action">
 				<div x-mojo-element="CheckBox" name="item-complete"></div>
 			</div>
+		</div>
+		<div class="no-items-message">
+			#{noItemsMessage}
 		</div>
 	</div>
 </div>
